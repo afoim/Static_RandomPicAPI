@@ -5,6 +5,7 @@ const ROOT = __dirname;
 const SRC_RI = path.join(ROOT, 'ri');
 const DIST = path.join(ROOT, 'dist');
 const DIST_RI = path.join(DIST, 'ri');
+const CONFIG_FILE = path.join(ROOT, 'config.json');
 
 // Helper: Shuffle Array (Fisher-Yates)
 function shuffle(array) {
@@ -18,6 +19,22 @@ function shuffle(array) {
 // Main function
 function build() {
     console.log('Starting build...');
+
+    // Load Config
+    let config = { domain: '' };
+    if (fs.existsSync(CONFIG_FILE)) {
+        try {
+            const configContent = fs.readFileSync(CONFIG_FILE, 'utf8');
+            const parsed = JSON.parse(configContent);
+            if (parsed.domain) {
+                // Remove trailing slash if present
+                config.domain = parsed.domain.replace(/\/$/, '');
+            }
+        } catch (e) {
+            console.warn('Failed to parse config.json, using default settings.');
+        }
+    }
+    console.log(`Using domain prefix: "${config.domain}"`);
 
     // 1. Clean/Create Dist
     if (fs.existsSync(DIST)) {
@@ -68,12 +85,13 @@ function build() {
 (function() {
     var total = ${count};
     var type = '${type}';
+    var domain = '${config.domain}';
     
     // Function to get a random URL
     function getRandomUrl() {
         var num = Math.floor(Math.random() * total) + 1;
-        // Using absolute path from root
-        return '/ri/' + type + '/' + num + '.webp';
+        // Using configured domain + absolute path
+        return domain + '/ri/' + type + '/' + num + '.webp';
     }
 
     // Expose global function
