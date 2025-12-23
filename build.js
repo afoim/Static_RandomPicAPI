@@ -127,6 +127,15 @@ function build() {
         srcElements.forEach(function(el) {
             el.src = url;
         });
+
+        // Update elements with style containing the placeholder (e.g. background-image)
+        var styleElements = document.querySelectorAll('[style*="' + placeholder + '"]');
+        styleElements.forEach(function(el) {
+            var style = el.getAttribute('style');
+            if (style && style.indexOf(placeholder) !== -1) {
+                el.setAttribute('style', style.replace(new RegExp(placeholder, 'g'), url));
+            }
+        });
         
         console.log('Random Pic ' + type.toUpperCase() + ' updated elements with placeholder: ' + placeholder);
     });
@@ -165,6 +174,7 @@ function createDemoHtml() {
         .card { border: 1px solid #ccc; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
         img { max-width: 100%; height: auto; border-radius: 4px; }
         .btn { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
+        .bg-box { width: 100%; height: 200px; background-size: cover; background-position: center; border-radius: 4px; border: 1px dashed #999; display: flex; align-items: center; justify-content: center; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -179,6 +189,12 @@ function createDemoHtml() {
         <p>Link example (HTML Form/Link replacement):</p>
         <!-- The JS will find href="https://random:h" and update href -->
         <a href="https://random:h" class="btn" target="_blank">Open Random Horizontal Image</a>
+        <br><br>
+        <p>Background Image example (style replacement):</p>
+        <!-- The JS will find style*="https://random:h" and update it -->
+        <div class="bg-box" style="background-image: url('https://random:h');">
+            Background Image
+        </div>
     </div>
 
     <div class="card">
