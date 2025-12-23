@@ -114,43 +114,69 @@ function build() {
         // Global search and replace for the placeholder in all attributes and text nodes
         document.addEventListener('DOMContentLoaded', function() {
             var url = getRandomUrl();
-            var placeholder = 'https://random:' + type;
-            var regex = new RegExp(placeholder, 'g');
+            // Match random:{type}, http://random:{type}, https://random:{type}
+            var regex = new RegExp('(https?:\\/\\/)?random:' + type, 'g');
             
             // 1. Scan all elements and their attributes
             var allElements = document.getElementsByTagName('*');
             for (var i = 0; i < allElements.length; i++) {
                 var el = allElements[i];
-                // Skip script tags to avoid replacing source code if it happens to match (though unlikely in this context)
+                // Skip script tags
                 if (el.tagName === 'SCRIPT') continue;
 
                 var attributes = el.attributes;
+                var dataStyleContent = null;
+
                 if (attributes) {
                     for (var j = 0; j < attributes.length; j++) {
                         var attr = attributes[j];
-                        if (attr.value && attr.value.indexOf(placeholder) !== -1) {
-                            attr.value = attr.value.replace(regex, url);
+                        // Check if attribute value matches the placeholder regex
+                        if (attr.value && regex.test(attr.value)) {
+                            var newValue = attr.value.replace(regex, url);
+                            attr.value = newValue; // Update the attribute value
+                            
+                            // If this was a 'data-style' attribute, store it for later application
+                            if (attr.name === 'data-style') {
+                                dataStyleContent = newValue;
+                            }
+                        } else if (attr.name === 'data-style') {
+                             // Even if no placeholder was replaced, we might want to apply data-style
+                             // But usually data-style is used for this specific purpose. 
+                             // Let's capture it if it exists and wasn't processed above (though regex check handles replacement)
+                             dataStyleContent = attr.value;
                         }
                     }
                 }
+
+                // If we found a data-style attribute (processed or not), merge it into style
+                if (dataStyleContent) {
+                    var currentStyle = el.getAttribute('style') || '';
+                    // Append with a semicolon if needed
+                    if (currentStyle && !currentStyle.trim().endsWith(';')) {
+                        currentStyle += ';';
+                    }
+                    el.setAttribute('style', currentStyle + (currentStyle ? ' ' : '') + dataStyleContent);
+                    // Optional: remove data-style after applying to keep DOM clean? 
+                    // Let's keep it or remove it? Removing is cleaner.
+                    el.removeAttribute('data-style');
+                }
             }
 
-            // 2. Scan text nodes (including inside <style> tags)
-            var rootNode = document.documentElement || document.body;
-            if (rootNode) {
-                var walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, null, false);
+            // 2. Scan text nodes
+            if (document.body) {
+                var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
                 var node;
                 while (node = walker.nextNode()) {
-                    // Skip if parent is script (but allow style)
-                    if (node.parentNode && node.parentNode.tagName === 'SCRIPT') continue;
+                    // Skip if parent is script or style
+                    if (node.parentNode && (node.parentNode.tagName === 'SCRIPT' || node.parentNode.tagName === 'STYLE')) continue;
                     
-                    if (node.nodeValue && node.nodeValue.indexOf(placeholder) !== -1) {
+                    if (node.nodeValue && regex.test(node.nodeValue)) {
                         node.nodeValue = node.nodeValue.replace(regex, url);
                     }
                 }
             }
             
-            console.log('Random Pic ' + type.toUpperCase() + ' globally replaced placeholder: ' + placeholder);
+            console.log('Random Pic ' + type.toUpperCase() + ' globally replaced placeholders matching: (https?://)?random:' + type);
         });
     })();
 `;
@@ -188,18 +214,6 @@ function createDemoHtml() {
         img { max-width: 100%; height: auto; border-radius: 4px; }
         .btn { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }
         .bg-box { width: 100%; height: 200px; background-size: cover; background-position: center; border-radius: 4px; border: 1px dashed #999; display: flex; align-items: center; justify-content: center; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); font-weight: bold; }
-        
-        /* CSS Variable Example in Style Tag */
-        :root {
-            --random-bg-h: url('https://random:h');
-        }
-        .css-var-box {
-            width: 100%; height: 100px; 
-            background-image: var(--random-bg-h);
-            background-size: cover;
-            border: 1px solid red;
-            display: flex; align-items: center; justify-content: center; color: white; text-shadow: 0 1px 3px black;
-        }
     </style>
 </head>
 <body>
@@ -208,20 +222,30 @@ function createDemoHtml() {
 
     <div class="card">
         <h2>Horizontal Image (横屏)</h2>
-        <!-- src replacement -->
-        <img src="https://random:h" alt="Loading random horizontal image..." />
-        <br><br>
-        
-        <p>Complex Inline Style (CSS Variables):</p>
-        <!-- Complex Inline Style Replacement -->
-        <div style="--bannerOffset: 15vh;--banner-height-home: 65vh;--banner-height: 35vh;--configHue: 361;--page-width: 75rem;--bg-url: url(https://random:h);--bg-enable: 1;--bg-position: center;--bg-size: cover;--bg-repeat: no-repeat;--bg-attachment: fixed;--bg-opacity: 0.5; width: 100%; height: 200px; background-image: var(--bg-url); background-size: cover;">
-            Complex Inline Style Box
-        </div>
+        <!-- src replacement: https -->
+        <p>Using <code>https://random:h</code>:</p>
+        <img src="https://random:h" alt="Loading..." />
         <br><br>
 
-        <p>CSS Variable defined in &lt;style&gt; tag:</p>
-        <div class="css-var-box">
-            CSS Variable Box
+        <!-- src replacement: http -->
+        <p>Using <code>http://random:h</code>:</p>
+        <img src="http://random:h" alt="Loading..." />
+        <br><br>
+        
+        <!-- src replacement: plain -->
+        <p>Using <code>random:h</code> (useful for data attrs):</p>
+        <input type="text" value="random:h" readonly>
+        <br><br>
+
+        <p>Link example (href replacement):</p>
+        <!-- href replacement -->
+        <a href="https://random:h" class="btn" target="_blank">Open Random Horizontal Image</a>
+        <br><br>
+        
+        <p>Background Image example (style replacement):</p>
+        <!-- style replacement -->
+        <div class="bg-box" style="background-image: url('random:h');">
+            Background Image (url('random:h'))
         </div>
     </div>
 
