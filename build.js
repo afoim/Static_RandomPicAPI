@@ -90,7 +90,32 @@ function build() {
         console.log(`Processed ${type}: ${counts[type]} images.`);
     });
 
-    // 3. Generate Single JS
+    // 3. Generate info.json
+    const info = {
+        generated_at: new Date().toISOString(),
+        build_timestamp: Date.now(),
+        counts: { ...counts },  // { h: 123, v: 45 }
+        files: {}
+    };
+
+    types.forEach(type => {
+        if (counts[type] > 0) {
+            info.files[type] = [];
+            for (let i = 1; i <= counts[type]; i++) {
+                info.files[type].push(`${i}.webp`);
+            }
+        }
+    });
+
+    fs.writeFileSync(
+        path.join(DIST, 'info.json'),
+        JSON.stringify(info, null, 2),
+        'utf8'
+    );
+
+    console.log(`Generated info.json -> ${Object.keys(info.files).length} categories, total ${Object.values(counts).reduce((a, b) => a + b, 0)} files`);
+
+    // 4. Generate Single JS
     const jsContent = `
 /**
  * Static Random Pic API
@@ -244,7 +269,7 @@ function build() {
         createDemoHtml();
     }
 
-    // 4. Generate Gallery Page
+    // 5. Generate Gallery Page
     createGalleryHtml(counts, config);
     
     console.log('Build complete. Output is in /dist folder.');
