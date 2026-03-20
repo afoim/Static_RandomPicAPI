@@ -106,6 +106,50 @@ console.log(urlV);
 该页面采用瀑布流布局 (Waterfall Layout) 和懒加载 (Lazy Loading) 技术，展示所有的随机图片。
 你可以直接访问 `/gallery.html` 来查看所有图片。
 
+## 6. 元数据文件 (Metadata) info.json
+每次构建完成后，`dist/info.json` 会自动生成，包含当前构建的基本信息和所有可用图片的清单。主要用于：
+
+- 外部工具 / API 消费
+- 前端动态生成画廊、随机列表
+- 调试、统计图片数量
+- 判断是否需要重新部署
+
+### 示例内容
+
+```json
+{
+  "generated_at": "2025-03-20T22:05:45.678Z",
+  "build_timestamp": 1742491545678,
+  "counts": {
+    "h": 156,
+    "v": 73
+  },
+  "files": {
+    "h": [
+      "1.webp",
+      "2.webp",
+      "...",
+      "156.webp"
+    ],
+    "v": [
+      "1.webp",
+      "2.webp",
+      "...",
+      "73.webp"
+    ]
+  }
+}
+```
+
+### 字段说明
+
+|字段|类型|说明|
+|---|---|---|
+|generated_at|string|ISO 8601 格式的构建完成时间|
+|build_timestamp|number|Unix 时间戳（毫秒），便于比较新旧构建|
+|counts|object|各类型图片数量（h = 横屏，v = 竖屏）|
+|files|object|键为类型（h/v），值为该类型下所有转换后的文件名数组（按 1.webp → n.webp 顺序）|
+
 ## 6. 目录结构
 *   `ri/` - 图片源目录
     *   `ri/h/` - 放入横屏图片
@@ -113,6 +157,7 @@ console.log(urlV);
 *   `dist/` - 构建产物 (部署这个文件夹)
     *   `ri/` - 处理后的图片
     *   `random.js` - **核心逻辑文件**
+    *   `info.json` - 元数据文件
     *   `index.html` - 演示页面
     *   `gallery.html` - 画廊页面
 *   `build.js` - 构建脚本
